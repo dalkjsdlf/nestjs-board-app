@@ -3,11 +3,13 @@ import { BoardsController } from './boards.controller';
 import { BoardsService } from './boards.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Board } from './board.entity';
-import { BoardRepository } from './board.repository';
+import { JwtStrategy } from 'src/auth/jwt-strategy';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Board])
+    TypeOrmModule.forFeature([Board]),
+    AuthModule
   ],
   controllers: [BoardsController],
   providers: [BoardsService]

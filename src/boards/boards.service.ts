@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { BoardStatus } from './board-status.enum';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BoardRepository } from './board.repository';
 import { Board } from './board.entity';
+import { User } from 'src/auth/user.entity';
 
 @Injectable()
 export class BoardsService {
-
     
     constructor(
         @InjectRepository(Board)
@@ -15,35 +15,42 @@ export class BoardsService {
     {}
 
     async getBoardById(id : number) : Promise<Board>{
+        const logger = new Logger();
         
-        const board = await this.boardRepository.findOne(id);
-
+        const board = await this.boardRepository.findOne({id});
+        logger.debug("board");
         if(!board){
             throw new NotFoundException(`${id}에 해당하는 게시글을 찾을 수가 없습니다.`);
         }
-
+        
         return board;
     } 
-
+    
     /*
-        getAllBoards() : Boards
+    getAllBoards() : Boards
     */
-    async getAllBoards() : Promise<Board[]> {
-        const boards = await this.boardRepository.find();
+   async getAllBoards(user : User) : Promise<Board[]> {
+       const logger = new Logger();
+       //const boards = await this.boardRepository.find(userId : user.id);
+       const query = this.boardRepository.createQueryBuilder('board');
+       query.where('board.userId = :userId',{userId:user.id});
+       const boards = await query.getMany();
 
+        logger.debug("board");
         console.log(`게시글 조회 건수 : [${boards.length}]`);
 
         return boards;
     }
 
-    async createBoard(createBoardDto : CreateBoardDto) : Promise<void> {
+    async createBoard(createBoardDto : CreateBoardDto, user : User) : Promise<void> {
 
         const {title, description} = createBoardDto;
 
         const board : Board= this.boardRepository.create({
             title,
             description,
-            status:BoardStatus.PUBLIC
+            status:BoardStatus.PUBLIC,
+            user
         })
 
         console.log(`${board.id} ID를 가진 새로운 게시글 생성`);
@@ -53,9 +60,9 @@ export class BoardsService {
         await this.boardRepository.save(board);
     }
 
-    async deleteBoard(id : number) : Promise<void>{
+    async deleteBoard(id : number, user : User) : Promise<void>{
 
-        const result = await this.boardRepository.delete(id);
+        const result = await this.boardRepository.delete({id, user});
 
         console.log("result : ",result);
 
@@ -66,6 +73,7 @@ export class BoardsService {
 
     async updateBoardStatus(id : number , status : BoardStatus): Promise<void>{
 
+ //       const board = await this.getBoardById({id, userId : user.id});
         const board = await this.getBoardById(id);
 
         board.status = status;

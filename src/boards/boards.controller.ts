@@ -1,11 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { BoardsService } from './boards.service';
 import { BoardStatus } from './board-status.enum';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { BoardStatusValidationPipe } from './pipes/board-status-validation.pipe';
 import { Board } from './board.entity';
+import { AuthGuard } from '@nestjs/passport';
+import { GetUser } from 'src/auth/get-user.decorator';
+import { User } from 'src/auth/user.entity';
 
 @Controller('boards')
+@UseGuards(AuthGuard())
 export class BoardsController {
     constructor(private boardsService : BoardsService){}
     
@@ -13,9 +17,9 @@ export class BoardsController {
      * 모든 게시물을 가져온다.
      */
     @Get('/')
-    async getAllBoards() : Promise<Board[]>{
+    async getAllBoards(@GetUser() user : User) : Promise<Board[]>{
 
-        const boards = await this.boardsService.getAllBoards();
+        const boards = await this.boardsService.getAllBoards(user);
 
         return boards;
     }
@@ -24,7 +28,7 @@ export class BoardsController {
     * 특정 ID로 게시글을 조회한다. 
     */
    @Get('/:id')
-   async getBoardById(@Param('id') id : number) : Promise<Board>{
+   async getBoardById(@Param('id') id : number, @GetUser() user : User ) : Promise<Board>{
 
     const board = await this.boardsService.getBoardById(id);
 
@@ -36,21 +40,22 @@ export class BoardsController {
      */
     @Post('/')
     @UsePipes(ValidationPipe)
-    async createBoard(@Body() createBoardDto : CreateBoardDto) : Promise<void>{
-        await this.boardsService.createBoard(createBoardDto);
+    async createBoard(@Body() createBoardDto : CreateBoardDto, @GetUser() user : User) : Promise<void>{
+        await this.boardsService.createBoard(createBoardDto, user);
     }
 
 
     @Patch('/:id/status')
     async updateBoardStatus(@Param('id') id : number,
-                            @Body('status', BoardStatusValidationPipe) status : BoardStatus ) : Promise<void>
+                            @Body('status', BoardStatusValidationPipe) status : BoardStatus,
+                            @GetUser() user : User ) : Promise<void>
     {
         await this.boardsService.updateBoardStatus(id, status);
     }
 
     @Delete('/:id')
-    async deleteBoard(@Param('id') id : number) : Promise<void>{
-        await this.boardsService.deleteBoard(id);
+    async deleteBoard(@Param('id') id : number, @GetUser() user : User ) : Promise<void>{
+        await this.boardsService.deleteBoard(id, user);
     }
 
     /**
